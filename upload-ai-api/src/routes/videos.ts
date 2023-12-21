@@ -107,7 +107,7 @@ export async function videosRoute(app: FastifyInstance){
             temperature: z.number().min(0).max(1).default(0.5),
         })
 
-        const {prompt} = bodySchema.parse(request.body);
+        const {videoId, template} = bodySchema.parse(request.body);
 
 
     })
