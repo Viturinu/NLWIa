@@ -1,12 +1,13 @@
 import { FastifyInstance } from "fastify";
 import {fastifyMultipart} from "@fastify/multipart"
 import { prisma } from "../lib/prisma";
-import fs from  "node:fs"
+import fs, { createReadStream } from  "node:fs"
 import {pipeline} from "node:stream"
 import path from "node:path"; //pra gente buscar o caminho do arquivo enviado; Assim sabemos quando vem do node, ou de algum pacote instalado via npm ou pnpm
 import { randomUUID } from "node:crypto"; //pra gerarmos um id aleatório; outro módulo interno do node
 import {promisify} from "node:util"
 import {z} from "zod"
+import { openai } from "../lib/openai";
 
 const pump = promisify(pipeline) //node tem um grande diferencial que é de trabalhar com streaming (formas de ler dados ou escrever dados aos poucos); ou seja, chegou um pedaço for arquivo, ao invés de alocar em memoria ram, já vamos escrevendo ele em disco
                                 //daí vem o pipeline, processo de upload total, que utiliza de uma biblioteca antiga, por isso utilizados a função promisify para conseguirmos utilizar async e await e fazermos via promise.
@@ -59,6 +60,55 @@ export async function videosRoute(app: FastifyInstance){
             videoId: z.string().uuid(),
         })
         const {videoId} = paramsSchema.parse(request.params); //parse vai validar se request.params tá seguindo os valores definidos no zod em object; se tiver seguindo, ele retorna um objeto e podemos então fazer a desestruturação com {videoId}
+
+        const bodySchema = z.object({
+            prompt: z.string(),
+        })
+
+        const {prompt} = bodySchema.parse(request.body);
+
+        const video = await prisma.video.findUniqueOrThrow({ //UniqueandThrow pois eu preciso do vídeo, é obrigatório, se não encontrar tem que disparar um erro
+            where: {
+                id: videoId,
+            }
+        })
+
+        const videoPath = video.path //variavel salva no banco de dados no momento da inserção do video lá
+        const audioReadStream = createReadStream(videoPath) //leitura de arquivo com modulo interno do node
+
+        const response = await openai.audio.transcriptions.create({
+            file: audioReadStream,
+            model: "whisper-1",
+            language: "pt",
+            response_format:"json",
+            temperature: 0,
+            prompt,
+        })
+        
+        const transcription = response.text
+
+        await prisma.video.update({
+            where: {
+                id: videoId,
+            },
+            data:{
+                transcription,
+            }
+        })
+
+        return {transcription};
+    })
+
+    app.post("/ai/complete", async (request) => {
+
+        const bodySchema = z.object({
+            videoId: z.string().uuid(),
+            template: z.string(),
+            temperature: z.number().min(0).max(1).default(0.5),
+        })
+
+        const {prompt} = bodySchema.parse(request.body);
+
 
     })
 }
