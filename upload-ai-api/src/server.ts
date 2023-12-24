@@ -9,7 +9,7 @@ const app = fastify({
 
 try {
 
-    app.register(fastifyCors, {
+    app.register(fastifyCors, { //define quem será capaz de consumir nossa API; colocar url quando eu produção
         origin: "*",
     })
 
