@@ -8,10 +8,21 @@ import { getFFmpeg } from "@/lib/ffmpeg";
 import { fetchFile } from "@ffmpeg/util"
 import { api } from "../lib/axios"
 
+type Status = "waiting" | "converting" | "uploading" | "generating" | "success"; //podemos criar um TIPO no JS / TS; Muito bacana isso.
+
+const statusMessage = {
+    converting: "Convertendo...",
+    generating: "Transcrevendo...",
+    uploading: "Carregando...",
+    success: "Sucesso!",
+}
+
 export function VideoInputForm() {
 
     const [videoFile, setVideoFile] = useState<File | null>(null)
     const promptInputRef = useRef<HTMLTextAreaElement>(null) //serve para acessar o elemento na DOM (pequeno delay, mas bem pouco, por isso a interrogação ao acessar propriedades do elemento via ref)
+    const [status, setStatus] = useState<Status>("waiting"); // estado para botão do carregamento
+
 
     function handleFileSelect(event: ChangeEvent<HTMLInputElement>) {
         const { files } = event.currentTarget
@@ -26,29 +37,41 @@ export function VideoInputForm() {
 
     async function handleUploadVideo(event: FormEvent<HTMLFormElement>) {
         event.preventDefault() //evitar recarrego de paágina ao chamar função (acontece naturalmente na requisição do form)
+        try {
 
-        const prompt = promptInputRef.current?.value;
+            setStatus("converting");
 
-        if (!videoFile) {
-            return
+            const prompt = promptInputRef.current?.value;
+
+            if (!videoFile) {
+                return
+            }
+
+            //converter video em audio (pois api suporte apenas 25mb, logo para video é muito pouco)
+            const audioFile = await convertVideoToAudio(videoFile); //passando variavel de estado e convertendo em mp3
+
+            const data = new FormData() //precisa ser form data, pois pra mandar arquivos para backend (api), precisamos utilizar o formdata, não é um JSON como normalmente.
+            data.append("file", audioFile)
+
+            setStatus("uploading");
+
+            const response = await api.post("/videos", data);
+            const videoId = response.data.video.id; //pegando id do video trabalhado e armazenado no BD
+
+            setStatus("generating");
+
+            await api.post(`/videos/${videoId}/transcription`, {
+                prompt,
+            });
+
+            setStatus("success");
+
+        } catch (error) {
+            console.log(error);
         }
-
-        //converter video em audio (pois api suporte apenas 25mb, logo para video é muito pouco)
-        const audioFile = await convertVideoToAudio(videoFile);
-
-        const data = new FormData() //precisa ser form data, pois pra mandar arquivos para backend (api), precisamos utilizar o formdata, não é um JSON como normalmente.
-        data.append("file", audioFile)
-
-        const response = await api.post("/videos", data);
-        const videoId = response.data.video.id; //pegando id do video trabalhado e armazenado no BD
-
-        await api.post(`/videos/${videoId}/transcription`, {
-            prompt,
-        });
-
-        console.log("All done");
-
-
+        finally {
+            setStatus("waiting");
+        }
 
     }
 
@@ -86,7 +109,6 @@ export function VideoInputForm() {
         return audioFile;
     }
 
-
     const previewURL = useMemo(() => {
         if (!videoFile) {
             return null
@@ -117,13 +139,22 @@ export function VideoInputForm() {
                 <Label htmlFor="transcription_prompt">Prompt de transcrição</Label>
                 <Textarea
                     ref={promptInputRef}
+                    disabled={status != "waiting"}
                     id="trancription_prompt"
                     className="h-20 leading-relaxed resize-none"
                     placeholder="Inclua palavras-chave mencionadas no vídeo separadas por vírgulas (,)" />
             </div>
-            <Button type="submit" className="w-full">
-                Carregar vídeo
-                <Upload className="h-4 w-4 ml-2" />
+            <Button
+                data-success={status === "success"} //ISso é nativo do HTML, atributos data (estudar maus sobre isso)
+                disabled={status != "waiting"}
+                type="submit"
+                className="w-full data-[success=true]:bg-emerald-400" /*Se data-success igual a true (status === "success" ,  conforme definido ali acima), logo  background vai ficar emerald-400*/>
+                {status === "waiting" ? (
+                    <>
+                        Carregar vídeo
+                        <Upload className="h-4 w-4 ml-2" />
+                    </>
+                ) : statusMessage[status]}
             </Button>
         </form>
     )

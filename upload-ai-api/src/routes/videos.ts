@@ -55,7 +55,7 @@ export async function videosRoute(app: FastifyInstance) {
 
     })
 
-    app.post("/videos/:videoId/transcription", async (request) => {
+    app.post("/videos/:videoId/transcription", async (request, reply) => {
         console.log("Chegamos aqui para conversao do TRANSCRIPTION   -     AQUI")
         const paramsSchema = z.object({
             videoId: z.string().uuid(),
@@ -77,6 +77,7 @@ export async function videosRoute(app: FastifyInstance) {
         const videoPath = video.path //variavel salva no banco de dados no momento da inserção do video lá
         const audioReadStream = createReadStream(videoPath) //leitura de arquivo com modulo interno do node
         try {
+            console.log("Problema vai comecar -------------- : " + videoPath + " - " + process.env.OPENAI_KEY)
             const response = await openai.audio.transcriptions.create({
                 file: audioReadStream,
                 model: "whisper-1",
@@ -94,12 +95,15 @@ export async function videosRoute(app: FastifyInstance) {
                 },
                 data: {
                     transcription,
-                }
+                },
             })
 
             return { transcription };
+
         } catch (error) {
             console.log("Caiu neste erro: " + error);
+            reply.code(500).send("deu erro");
+
         }
 
     })
