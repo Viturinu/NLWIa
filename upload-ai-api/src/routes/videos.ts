@@ -8,6 +8,7 @@ import { randomUUID } from "node:crypto"; //pra gerarmos um id aleatório; outro
 import { promisify } from "node:util"
 import { z } from "zod"
 import { openai } from "../lib/openai";
+import {streamToResponse, OpenAIStream} from "ai"
 
 const pump = promisify(pipeline) //node tem um grande diferencial que é de trabalhar com streaming (formas de ler dados ou escrever dados aos poucos); ou seja, chegou um pedaço for arquivo, ao invés de alocar em memoria ram, já vamos escrevendo ele em disco
 //daí vem o pipeline, processo de upload total, que utiliza de uma biblioteca antiga, por isso utilizados a função promisify para conseguirmos utilizar async e await e fazermos via promise.
@@ -77,7 +78,6 @@ export async function videosRoute(app: FastifyInstance) {
         const videoPath = video.path //variavel salva no banco de dados no momento da inserção do video lá
         const audioReadStream = createReadStream(videoPath) //leitura de arquivo com modulo interno do node
         try {
-            console.log("Problema vai comecar -------------- : " + videoPath + " - " + process.env.OPENAI_KEY)
             const response = await openai.audio.transcriptions.create({
                 file: audioReadStream,
                 model: "whisper-1",
@@ -112,11 +112,11 @@ export async function videosRoute(app: FastifyInstance) {
 
         const bodySchema = z.object({
             videoId: z.string().uuid(),
-            template: z.string(),
+            prompt: z.string(),
             temperature: z.number().min(0).max(1).default(0.5),
         })
 
-        const { videoId, template, temperature } = bodySchema.parse(request.body);
+        const { videoId, prompt, temperature } = bodySchema.parse(request.body);
 
         const video = await prisma.video.findUniqueOrThrow({
             where: {
@@ -128,16 +128,25 @@ export async function videosRoute(app: FastifyInstance) {
             return reply.status(400).send({ error: "Video transcription was not generated yet" })
         }
 
-        const promptMessage = template.replace("transcription", video.transcription)
+        const promptMessage = prompt.replace("transcription", video.transcription)
 
         const response = await openai.chat.completions.create({
             model: "gpt-3.5-turbo-16k",
             temperature,
             messages: [
                 { role: "user", content: promptMessage }
-            ]
+            ],
+            stream: true, //aqui, aparentemente, aciona o sistema de stream da openai.
         })
 
-        return response
+        const stream = OpenAIStream(response);
+        streamToResponse(stream, reply.raw, {
+            headers: { //nessa rota, precisamos fazer a configuração do cors, que fizemos no servidor, de maneira manual, pois nenhuma configuração que fazemos no fastify funcionará quando estivermos escrevendo uma resposta nativa do node.
+                "Access-Control-Allow-Origin":"*",
+                "Access-Control-Allow-Methods":"GET, POST, PUT, DELETE, OPTIONS",
+
+            }
+        }) //raw retorna a referencia da resposta nativa do node, pois o fastify, apesar de usar o servidor http nativo do node por baixo dos panos, ele não usa diretamente as funções do node, ele cria como se fosse um wrapper em cima (cors são headers, apenas).
+
     })
 }

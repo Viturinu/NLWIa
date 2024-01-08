@@ -9,6 +9,9 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
+  "prisma":{
+    "seed": "tsx prisma/seed.ts"
+  },
   "devDependencies": {
     "@types/node": "^20.10.5",
     "prisma": "^5.7.1",
@@ -19,6 +22,7 @@
     "@fastify/cors": "^8.5.0",
     "@fastify/multipart": "^8.0.0",
     "@prisma/client": "5.7.1",
+    "ai": "^2.2.31",
     "dotenv": "^16.3.1",
     "fastify": "^4.25.1",
     "openai": "^4.24.1",

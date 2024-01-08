@@ -17,7 +17,11 @@ const statusMessage = {
     success: "Sucesso!",
 }
 
-export function VideoInputForm() {
+interface VideoInputFormProps{
+    onVideoUploaded: (id: string) => void;
+}
+
+export function VideoInputForm(props: VideoInputFormProps) {
 
     const [videoFile, setVideoFile] = useState<File | null>(null)
     const promptInputRef = useRef<HTMLTextAreaElement>(null) //serve para acessar o elemento na DOM (pequeno delay, mas bem pouco, por isso a interrogação ao acessar propriedades do elemento via ref)
@@ -65,6 +69,7 @@ export function VideoInputForm() {
             });
 
             setStatus("success");
+            props.onVideoUploaded(videoId);
 
         } catch (error) {
             console.log(error);
@@ -72,7 +77,6 @@ export function VideoInputForm() {
         finally {
             setStatus("waiting");
         }
-
     }
 
     async function convertVideoToAudio(video: File) {

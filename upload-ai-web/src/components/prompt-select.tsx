@@ -2,23 +2,45 @@ import { useEffect, useState } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { api } from "@/lib/axios";
 
-export function PromptSelect() {
+interface Prompt{
+    id: string
+    title: string
+    template: string
+}
 
-    const [prompts, setPrompts] = useState(null);
+interface PromptSelectProps{
+    onPromptSelected: (template: string) => void
+}
+
+export function PromptSelect(props: PromptSelectProps) {
+
+    const [prompts, setPrompts] = useState<Prompt[] | null>(null);
     useEffect(() => {
         api.get("/prompts").then(response => {
             setPrompts(response.data);
         })
     }, [])
 
+    function handlePromptSelected(promptId: string){
+        const selectedPrompt = prompts?.find(prompt=> prompt.id === promptId) //percore o estado de prompts e se encontrar algum prompt cujo valor do id seja igual ao parametro promptId passado acima
+
+        if(!selectedPrompt){
+            return
+        }
+        props.onPromptSelected(selectedPrompt.template)
+    }
+
     return (
-        <Select>
+        <Select onValueChange={handlePromptSelected}>
             <SelectTrigger>
                 <SelectValue placeholder="Selecione um prompt..."></SelectValue>
             </SelectTrigger>
             <SelectContent>
-                <SelectItem value="title">Titulo do YouTube</SelectItem>
-                <SelectItem value="description">Descrição do YouTube</SelectItem>
+                {prompts?.map(prompt => {
+                    return(
+                        <SelectItem key={prompt.id} value={prompt.id}>{prompt.title}</SelectItem>
+                    )
+                })}
             </SelectContent>
         </Select>
     )
