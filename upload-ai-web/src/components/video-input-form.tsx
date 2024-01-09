@@ -24,7 +24,7 @@ interface VideoInputFormProps{
 export function VideoInputForm(props: VideoInputFormProps) {
 
     const [videoFile, setVideoFile] = useState<File | null>(null)
-    const promptInputRef = useRef<HTMLTextAreaElement>(null) //serve para acessar o elemento na DOM (pequeno delay, mas bem pouco, por isso a interrogação ao acessar propriedades do elemento via ref)
+    const promptInputRef = useRef<HTMLTextAreaElement>(null) //serve para acessar o elemento na DOM (pequeno delay, mas bem pouco, por isso a interrogação ao acessar propriedades do elemento via ref) (creio que esteja acessando a textArea onde o prompt está sendo colocado em tempo real via estado)
     const [status, setStatus] = useState<Status>("waiting"); // estado para botão do carregamento
 
 
@@ -45,21 +45,21 @@ export function VideoInputForm(props: VideoInputFormProps) {
 
             setStatus("converting");
 
-            const prompt = promptInputRef.current?.value;
+            const prompt = promptInputRef.current?.value; //(creio que esteja acessando a textArea onde o prompt está sendo colocado em tempo real via estado)
 
-            if (!videoFile) {
+            if (!videoFile) { //variável de estado, que está sendo preenchida pela função acima VideoInputForm().
                 return
             }
 
             //converter video em audio (pois api suporte apenas 25mb, logo para video é muito pouco)
-            const audioFile = await convertVideoToAudio(videoFile); //passando variavel de estado e convertendo em mp3
+            const audioFile = await convertVideoToAudio(videoFile); //passando variavel de estado e convertendo em mp3 via WebAssembly (ffmpeg)
 
-            const data = new FormData() //precisa ser form data, pois pra mandar arquivos para backend (api), precisamos utilizar o formdata, não é um JSON como normalmente.
-            data.append("file", audioFile)
+            const data = new FormData() //precisa ser FormData, pois pra mandar arquivos para backend (api), precisamos utilizar o formdata, não é um JSON como normalmente.
+            data.append("file", audioFile) //audio.mp3 criado na função abaixo convertVideoToAudio()
 
             setStatus("uploading");
 
-            const response = await api.post("/videos", data);
+            const response = await api.post("/videos", data); //onde acontece a escrita do vídeo em nosso servidor (API REST - FASTIFY), e onde tem o aramazenamento do vídeo (id e path) no Banco de Dados
             const videoId = response.data.video.id; //pegando id do video trabalhado e armazenado no BD
 
             setStatus("generating");

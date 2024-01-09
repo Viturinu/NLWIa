@@ -38,7 +38,7 @@ export async function videosRoute(app: FastifyInstance) {
         }
 
         const fileBaseName = path.basename(data.filename, extension) //mudar os nomes, pois podem vir nomes iguais em arquivos de pessoas diferentes, por isso criamos o nome dele no fileBaseName e alteramos
-        const fileUploadName = `${fileBaseName}-${randomUUID()}${extension}`
+        const fileUploadName = `${fileBaseName}-${randomUUID()}${extension}` //nome criado com UUID diferente, para evitar problemas com vídeos repetidos
         const uploadDestination = path.resolve(__dirname, "../../tmp", fileUploadName) //pegando diretorio desejado para despejo de file e colocando junto com nome do arquivo
 
         await pump(data.file, fs.createWriteStream(uploadDestination)) //primeiro parametro recebemos o upload do arquivo e o segundo é onde acontece a escrita deste arquivo, pouco a pouco, via streaming
@@ -56,8 +56,7 @@ export async function videosRoute(app: FastifyInstance) {
 
     })
 
-    app.post("/videos/:videoId/transcription", async (request, reply) => {
-        console.log("Chegamos aqui para conversao do TRANSCRIPTION   -     AQUI")
+    app.post("/videos/:videoId/transcription", async (request, reply) => { //onde acontece a transcrição do vídeo e retorna essa transcrição via JSON
         const paramsSchema = z.object({
             videoId: z.string().uuid(),
         })
@@ -69,7 +68,7 @@ export async function videosRoute(app: FastifyInstance) {
 
         const { prompt } = bodySchema.parse(request.body);
 
-        const video = await prisma.video.findUniqueOrThrow({ //UniqueandThrow pois eu preciso do vídeo, é obrigatório, se não encontrar tem que disparar um erro
+        const video = await prisma.video.findUniqueOrThrow({ //FindUniqueOrThrow pois eu preciso do vídeo, é obrigatório, se não encontrar tem que disparar um erro
             where: {
                 id: videoId,
             }
@@ -123,7 +122,7 @@ export async function videosRoute(app: FastifyInstance) {
                 id: videoId,
             }
         })
-
+ 
         if (!video.transcription) {
             return reply.status(400).send({ error: "Video transcription was not generated yet" })
         }

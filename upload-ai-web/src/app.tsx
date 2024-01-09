@@ -15,14 +15,14 @@ export function App() {
   const [temperature, setTemperature] = useState(0.5);
   const [videoId, setVideoId] = useState<string | null>(null); //é aqui que acontece a conversação entre componentes, pois neste momento, através da função promps.onvideoUploaded(videoId) lá no compoennte video-input-form.tsx, a gente avisa aqui no app.tsx que o video terminou de ser carregado, colocando o id no videoId 
 
-  const {input, setInput, handleInputChange, handleSubmit, completion, isLoading} = useCompletion({
+  const { input, setInput, handleInputChange, handleSubmit, completion, isLoading } = useCompletion({
     api: "http://localhost:3333/ai/complete",
     body: {
       videoId,
       temperature,
-    }, 
+    },
     headers: {
-      "Content-type" : "application/json",
+      "Content-type": "application/json",
     }
   })
 
@@ -34,10 +34,14 @@ export function App() {
           <span className="text-sm text-muted-foreground">Desenvovlido com 💜 no NLW do RocketSeat</span>
 
           <Separator orientation="vertical" className="h-6" />
+          <Button asChild variant="outline">
 
-          <Button variant="outline">
-            <Github className="w-4 h-4 mr-2" />
-            Github
+            <a href="https://github.com" target="_blank" rel="noopener noreferrer">
+              <Github className="w-4 h-4 mr-2" />
+              Github
+            </a>
+
+           
           </Button>
         </div>
       </div>
