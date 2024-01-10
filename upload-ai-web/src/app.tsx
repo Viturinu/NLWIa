@@ -15,7 +15,7 @@ export function App() {
   const [temperature, setTemperature] = useState(0.5);
   const [videoId, setVideoId] = useState<string | null>(null); //é aqui que acontece a conversação entre componentes, pois neste momento, através da função promps.onvideoUploaded(videoId) lá no compoennte video-input-form.tsx, a gente avisa aqui no app.tsx que o video terminou de ser carregado, colocando o id no videoId 
 
-  const { input, setInput, handleInputChange, handleSubmit, completion, isLoading } = useCompletion({
+  const { input, setInput, handleInputChange, handleSubmit, completion, isLoading } = useCompletion({ //input passado da outra tela pra essa tela (setInput é usado como parametro de um componente no prompt-select.tsx, por isso há uma conversação de duas telas diferentes)
     api: "http://localhost:3333/ai/complete",
     body: {
       videoId,
